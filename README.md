@@ -1,6 +1,6 @@
-## AWS Proton Sample Cloudformation and Terraform Templates
+## AWS Proton workshop - Sample Cloudformation and Terraform Templates
 
-This repository is a curated list of templates to use within AWS Proton that are authored for integration with [Terraform](https://www.terraform.io/).
+This repository is a curated list of templates to use within AWS Proton that are authored for integration with Cloudformation and [Terraform](https://www.terraform.io/).
 
 
 ### Registering Templates Using Template Sync
