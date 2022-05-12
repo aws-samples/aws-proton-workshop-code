@@ -1,5 +1,3 @@
-[![proton-run](https://github.com/warpspeed6/aws-proton-terraform-sample-templates/actions/workflows/proton_run.yml/badge.svg)](https://github.com/warpspeed6/aws-proton-terraform-sample-templates/actions/workflows/proton_run.yml)
-
 ## AWS Proton Sample Terraform Templates
 
 This repository is a curated list of templates to use within AWS Proton that are authored for integration with [Terraform](https://www.terraform.io/).
