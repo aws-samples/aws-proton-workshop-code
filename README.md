@@ -2,7 +2,7 @@
 
 ## AWS Proton Sample Terraform Templates
 
-This repository is a curated list of samplex2 templates to use within AWS Proton that are authored for integration with [Terraform](https://www.terraform.io/).
+This repository is a curated list of templates to use within AWS Proton that are authored for integration with [Terraform](https://www.terraform.io/).
 
 
 ### Registering Templates Using Template Sync
