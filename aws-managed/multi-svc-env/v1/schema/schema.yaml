@@ -1,0 +1,20 @@
+schema:                            # required
+  format:                          # required
+    openapi: "3.0.0"               # required
+  # required              defined by administrator
+  environment_input_type: "PublicEnvironmentInput"
+  types:                           # required
+    # defined by administrator
+    PublicEnvironmentInput:
+      type: object
+      description: "Input properties for my environment"
+      properties:
+        vpc_cidr:                   # parameter
+          type: string
+          description: "The CIDR range for your VPC"
+          default: 10.0.0.0/16
+          pattern: ([0-9]{1,3}\.){3}[0-9]{1,3}($|/(16|24))
+        dns_hostname:               # parameter
+          type: string
+          description: "The hostname for the Route53 Hosted Zone"
+          default: protonworkshop.hosted.local

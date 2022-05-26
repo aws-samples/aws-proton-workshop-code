@@ -1,0 +1,215 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a service on AWS Fargate, hosted in a public subnet, and accessible via a load balancer.
+Mappings:
+  TaskSize:
+    x-small:
+      Cpu: 256
+      Memory: 512
+    small:
+      Cpu: 512
+      Memory: 1024
+    medium:
+      Cpu: 1024
+      Memory: 2048
+    large:
+      Cpu: 2048
+      Memory: 4096
+    x-large:
+      Cpu: 4096
+      Memory: 8192
+Resources:
+  # A log group for storing the stdout logs from this service's containers
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: '{{service.name}}/{{service_instance.name}}'
+
+  # The task definition. This is a simple metadata description of what
+  # container to run, and what resource requirements it has.
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: '{{service.name}}_{{service_instance.name}}'
+      Cpu: !FindInMap [TaskSize, '{{service_instance.inputs.task_size}}', Cpu]
+      Memory: !FindInMap [TaskSize, '{{service_instance.inputs.task_size}}', Memory]
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: '{{environment.outputs.ECSTaskExecutionRole}}'
+      TaskRoleArn: !Ref "AWS::NoValue"
+      ContainerDefinitions:
+        - Name: '{{service_instance.name}}'
+          Cpu: !FindInMap [TaskSize, '{{service_instance.inputs.task_size}}', Cpu]
+          Memory: !FindInMap [TaskSize, '{{service_instance.inputs.task_size}}', Memory]
+          Image: '{{service_instance.inputs.image}}'
+          Environment:
+          {% set env_vars = service_instance.inputs.env_vars.split(';') %}
+          {% for env_var in  env_vars %}
+          {% set env_name, env_value = env_var.split('=') %}
+            - Name: '{{ env_name|trim }}'
+              Value: '{{ env_value|trim }}'
+          {% endfor %}
+          PortMappings:
+            - ContainerPort: '{{service_instance.inputs.port}}'
+          LogConfiguration:
+            LogDriver: 'awslogs'
+            Options:
+              awslogs-create-group: 'True'
+              awslogs-group: '{{service.name}}/{{service_instance.name}}'
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: 'fargate/service/{{service.name}}'
+
+  # The service_instance.inputs. The service is a resource which allows you to run multiple
+  # copies of a type of task, and gather up their logs and metrics, as well
+  # as monitor the number of running tasks and replace any that have crashed
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: LoadBalancerRule
+    Properties:
+      ServiceName: '{{service.name}}_{{service_instance.name}}'
+      Cluster: '{{environment.outputs.ClusterName}}'
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: '{{service_instance.inputs.desired_count}}'
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - '{{environment.outputs.ContainerSecurityGroup}}'
+          Subnets:
+            - '{{environment.outputs.PublicSubnetOne}}'
+            - '{{environment.outputs.PublicSubnetTwo}}'
+            - '{{environment.outputs.PublicSubnetThree}}'
+      TaskDefinition: !Ref 'TaskDefinition'
+      LoadBalancers:
+        - ContainerName: '{{service_instance.name}}'
+          ContainerPort: '{{service_instance.inputs.port}}'
+          TargetGroupArn: !Ref 'TargetGroup'
+
+  # A target group. This is used for keeping track of all the tasks, and
+  # what IP addresses / port numbers they have. You can query it yourself,
+  # to use the addresses yourself, but most often this target group is just
+  # connected to an application load balancer, or network load balancer, so
+  # it can automatically distribute traffic across all the targets.
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      TargetType: ip
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Matcher:
+        HttpCode: 200-299
+      # Note that the Name property has a 32 character limit, which could be
+      # reached by using either {{service.name}}, {{service_instance.name}}
+      # or a combination of both as we're doing here, so we truncate the name to 29 characters
+      # plus an ellipsis different from '...' or '---' to avoid running into errors.
+      Name: '{{(service.name~"--"~service_instance.name)|truncate(29, true, "zzz")}}'
+      Port: '{{service_instance.inputs.port}}'
+      Protocol: HTTP
+      UnhealthyThresholdCount: 10
+      VpcId: '{{environment.outputs.VpcId}}'
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '5'
+        - Key: slow_start.duration_seconds
+          Value: '60'
+  
+  # Create a rule on the load balancer for routing traffic to the target group
+  LoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref 'TargetGroup'
+          Type: 'forward'
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - '*'
+      ListenerArn: !Ref LoadBalancerListener
+      Priority: 1
+
+  EcsSecurityGroupIngressFromALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties: 
+      Description: Ingress from the ALB
+      GroupId: '{{environment.outputs.ContainerSecurityGroup}}'
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref 'LoadBalancerSG'
+
+  # Load balancer, hosted in public subnets that is accessible
+  # to the public or internally depending on the scope. It is 
+  # intended to route traffic to one or more public/private
+  # facing services.
+  LoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the public facing load balancer
+      VpcId: '{{environment.outputs.VpcId}}'
+      SecurityGroupIngress:
+          {% if 'public' == service_instance.inputs.scope %}
+          # Allow access to ALB from anywhere on the internet
+          - CidrIp: 0.0.0.0/0
+            IpProtocol: -1
+          {% else %}
+          # Allow access only from the VPC CIDR
+          - CidrIp: '{{environment.outputs.VpcCIDR}}'
+            IpProtocol: -1
+            FromPort: '{{service_instance.inputs.port}}'
+            ToPort: '{{service_instance.inputs.port}}'
+          {% endif %}
+
+  {% if 'public' == service_instance.inputs.scope %}
+  {% set scheme = 'internet-facing' %}
+  {% set port = '80' %}
+  {% else %}
+  {% set scheme = 'internal' %}
+  {% set port = service_instance.inputs.port %}
+  {% endif %}
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: '{{scheme}}'
+      LoadBalancerAttributes:
+      - Key: idle_timeout.timeout_seconds
+        Value: '30'
+      Subnets:
+        # The load balancer is placed into the public subnets, so that traffic
+        # from the internet can reach the load balancer directly via the internet gateway
+        - '{{environment.outputs.PublicSubnetOne}}'
+        - '{{environment.outputs.PublicSubnetTwo}}'
+        - '{{environment.outputs.PublicSubnetThree}}'
+      SecurityGroups: [!Ref 'LoadBalancerSG']
+
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - LoadBalancer
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref 'TargetGroup'
+          Type: 'forward'
+      LoadBalancerArn: !Ref 'LoadBalancer'
+      Port: '{{port}}'
+      Protocol: HTTP
+    
+  RecordSet:
+    Type: AWS::Route53::RecordSet
+    DependsOn:
+      - LoadBalancer
+    Properties:
+      AliasTarget:
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+        DNSName: !GetAtt LoadBalancer.DNSName
+      HostedZoneId: '{{environment.outputs.HostedZoneId}}'
+      Name: '{{service.name}}.{{environment.outputs.DnsHostname}}'
+      Type: A
+
+Outputs:
+  ServiceEndpoint:
+    Description: The URL to access the service
+    Value: !Sub "http://${LoadBalancer.DNSName}"
