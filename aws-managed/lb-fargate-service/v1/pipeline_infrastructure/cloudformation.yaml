@@ -2,6 +2,9 @@ Resources:
   ECRRepo:
     Type: AWS::ECR::Repository
     DeletionPolicy: Retain
+    Properties:
+      ImageScanningConfiguration:
+        ScanOnPush: true
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -66,6 +69,13 @@ Resources:
                     },
                     "post_build": {
                       "commands": [
+                        "# Wait for ECR image scan to complete",
+                        "while [[ $(aws ecr describe-image-scan-findings --image-id imageTag=$IMAGE_TAG --repository-name $IMAGE_REPO_NAME | jq -r .imageScanStatus.status) != \"COMPLETE\" ]];do echo \"SCAN IS NOT YET COMPLETE...\"; sleep 3; done",
+                        "# Capture ECR Image scan results",
+                        "high=$(aws ecr describe-image-scan-findings --repository-name $IMAGE_REPO_NAME --image-id imageTag=$IMAGE_TAG | jq .imageScanFindings.findingSeverityCounts.HIGH)",
+                        "critical=$(aws ecr describe-image-scan-findings --repository-name $IMAGE_REPO_NAME --image-id imageTag=$IMAGE_TAG | jq .imageScanFindings.findingSeverityCounts.CRITICAL)",
+                        "# If there is a high or criical vulnerability, exit the build with an error code",
+                        "if [[ $high -gt 0  || $critical -gt 0 ]]; then echo \"ERROR: Vulnerabilities found in image, please correct\" && exit 2; else echo \"No vulnerabilities present in image, moving on\"; fi",
                         "aws proton --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml",
                         "yq w service.yaml 'instances[*].spec.image' \"$IMAGE_ID\" > rendered_service.yaml",
                         "cat rendered_service.yaml"
@@ -196,6 +206,7 @@ Resources:
               - ecr:InitiateLayerUpload
               - ecr:PutImage
               - ecr:UploadLayerPart
+              - ecr:DescribeImageScanFindings
             Effect: Allow
             Resource:
               Fn::GetAtt:
