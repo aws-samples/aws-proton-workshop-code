@@ -66,9 +66,11 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn: LoadBalancerRule
     Properties:
-      ServiceName: '{{service.name}}_{{service_instance.name}}'
+      ServiceName: '{{service.name}}_{{service_instance.name}}_spot'
       Cluster: '{{environment.outputs.ClusterName}}'
-      LaunchType: FARGATE
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE_SPOT
+          Weight: 1
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 75

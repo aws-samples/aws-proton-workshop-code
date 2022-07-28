@@ -90,7 +90,13 @@ Resources:
 
   # ECS Resources
   ECSCluster:
-    Type: AWS::ECS::Cluster
+  Type: AWS::ECS::Cluster
+  Properties:
+    CapacityProviders:
+      - FARGATE_SPOT
+    DefaultCapacityProviderStrategy: 
+      - CapacityProvider: FARGATE_SPOT
+        Weight: 1
 
   # A security group for the containers we will run in Fargate.
   # Rules are added to this security group based on what ingress you
