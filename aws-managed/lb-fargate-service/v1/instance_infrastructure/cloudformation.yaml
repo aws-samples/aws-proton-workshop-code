@@ -271,7 +271,7 @@ webAcllogging:
         webAcl
         Arn
     LogDestinationConfigs:
-      Fn::Sub: 'arn:aws:logs:{{AWS::Region}}:{{AWS::AccountId}:log-group:aws-waf-logs-proton-{{service.name}}'
+      Fn::Sub: 'arn:aws:logs:{{AWS::Region}}:{{AWS::AccountId}}:log-group:aws-waf-logs-proton-{{service.name}}'
     LoggingFilter:
       DefaultBehavior: KEEP
       Filters:
