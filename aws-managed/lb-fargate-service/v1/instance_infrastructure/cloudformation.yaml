@@ -208,6 +208,91 @@ Resources:
       HostedZoneId: '{{environment.outputs.HostedZoneId}}'
       Name: '{{service.name}}.{{environment.outputs.DnsHostname}}'
       Type: A
+      
+webAcl:
+  Type: AWS::WAFv2::WebACL
+  Properties: 
+    DefaultAction: 
+      Allow: {}
+    Description: A default WebAcl for AWS Proton services
+    Name: 'awsproton-waf-{{service.name}}'
+    Rules: 
+      - Name: AWS-CRS
+        Priority: 0
+        Statement: 
+          ManagedRuleGroupStatement: 
+            VendorName: AWS
+            Name: AWSManagedRulesCommonRuleSet
+            ExcludedRules: []
+        OverrideAction: 
+          None: {}
+        VisibilityConfig: 
+          SampledRequestsEnabled: false
+          CloudWatchMetricsEnabled: true
+          MetricName: 
+            Fn::Sub: '{{service.name}}-aws-crs-metric'
+      - Name: Bad-Inputs
+        Priority: 1
+        Statement: 
+          ManagedRuleGroupStatement: 
+            VendorName: AWS
+            Name: AWSManagedRulesKnownBadInputsRuleSet
+            ExcludedRules: []
+        OverrideAction: 
+          None: {}
+        VisibilityConfig: 
+          SampledRequestsEnabled: true
+          CloudWatchMetricsEnabled: true
+          MetricName: 
+            Fn::Sub: '{{service.name}}-bad-inputs-metric'
+      - Name: Anonymous-IpList
+        Priority: 2
+        Statement: 
+          ManagedRuleGroupStatement: 
+            VendorName: AWS
+            Name: AWSManagedRulesAnonymousIpList
+            ExcludedRules: []
+        OverrideAction: 
+          None: {}
+    Scope: REGIONAL
+
+cloudwatchLogsGroup:
+  Type: AWS::Logs::LogGroup
+  Properties:
+    LogGroupName:
+    Fn::Sub: 'aws-waf-logs-proton-{{service.name}}'
+    RetentionInDays: 90
+
+webAcllogging:
+  Type: AWS::WAFv2::LoggingConfiguration
+  Properties:
+    ResourceArn:
+      Fn::GetAtt:
+        webAcl
+        Arn
+    LogDestinationConfigs:
+      Fn::Sub: 'arn:aws:logs:{{AWS::Region}}:{{AWS::AccountId}:log-group:aws-waf-logs-proton-{{service.name}}'
+    LoggingFilter:
+      DefaultBehavior: KEEP
+      Filters:
+        Behavior: KEEP
+        Conditions:
+          ActionCondition:
+            Action: BLOCK
+        Requirement: MEETS_ANY
+      RedactedFields: 
+        SingleHeader:
+          Name: password
+
+albWebACLAssociation:
+  Type: AWS::WAFv2::WebACLAssociation
+  Properties:
+    ResourceArn:
+      !Ref 'LoadBalancer'
+    WebACLArn:
+      Fn::GetAtt:
+        webAcl
+        Arn      
 
 Outputs:
   ServiceEndpoint:
