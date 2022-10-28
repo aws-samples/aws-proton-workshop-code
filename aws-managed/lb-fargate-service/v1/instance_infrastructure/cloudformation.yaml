@@ -214,7 +214,6 @@ webAcl:
   Properties: 
     DefaultAction: 
       Allow: {}
-    Description: A default WebAcl for AWS Proton services
     Name: 'awsproton-waf-{{service.name}}'
     Rules: 
       - Name: AWS-CRS
@@ -255,25 +254,6 @@ webAcl:
         OverrideAction: 
           None: {}
     Scope: REGIONAL
-
-cloudwatchLogsGroup:
-  Type: AWS::Logs::LogGroup
-  Properties:
-    LogGroupName:
-    Fn::Sub: 'aws-waf-logs-proton-{{service.name}}'
-    RetentionInDays: 90
-
-
-
-albWebACLAssociation:
-  Type: AWS::WAFv2::WebACLAssociation
-  Properties:
-    ResourceArn:
-      !Ref 'LoadBalancer'
-    WebACLArn:
-      Fn::GetAtt:
-        webAcl
-        Arn      
 
 Outputs:
   ServiceEndpoint:
