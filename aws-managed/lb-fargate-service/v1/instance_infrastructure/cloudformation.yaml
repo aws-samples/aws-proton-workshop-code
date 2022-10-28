@@ -263,26 +263,26 @@ cloudwatchLogsGroup:
     Fn::Sub: 'aws-waf-logs-proton-{{service.name}}'
     RetentionInDays: 90
 
-webAcllogging:
-  Type: AWS::WAFv2::LoggingConfiguration
-  Properties:
-    ResourceArn:
-      Fn::GetAtt:
-        webAcl
-        Arn
-    LogDestinationConfigs:
-      Fn::Sub: 'arn:aws:logs:{{AWS::Region}}:{{AWS::AccountId}}:log-group:aws-waf-logs-proton-{{service.name}}'
-    LoggingFilter:
-      DefaultBehavior: KEEP
-      Filters:
-        Behavior: KEEP
-        Conditions:
-          ActionCondition:
-            Action: BLOCK
-        Requirement: MEETS_ANY
-      RedactedFields: 
-        SingleHeader:
-          Name: password
+#webAcllogging:
+#  Type: AWS::WAFv2::LoggingConfiguration
+#  Properties:
+#    ResourceArn:
+#      Fn::GetAtt:
+#        webAcl
+#        Arn
+#    LogDestinationConfigs:
+#      Fn::Sub: 'arn:aws:logs:{{AWS::Region}}:{{AWS::AccountId}}:log-group:aws-waf-logs-proton-{{service.name}}'
+#    LoggingFilter:
+#      DefaultBehavior: KEEP
+#      Filters:
+#        Behavior: KEEP
+#        Conditions:
+#          ActionCondition:
+#            Action: BLOCK
+#        Requirement: MEETS_ANY
+#      RedactedFields: 
+#        SingleHeader:
+#          Name: password
 
 albWebACLAssociation:
   Type: AWS::WAFv2::WebACLAssociation
