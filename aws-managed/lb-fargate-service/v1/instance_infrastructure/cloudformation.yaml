@@ -209,51 +209,51 @@ Resources:
       Name: '{{service.name}}.{{environment.outputs.DnsHostname}}'
       Type: A
       
-webAcl:
-  Type: AWS::WAFv2::WebACL
-  Properties: 
-    DefaultAction: 
-      Allow: {}
-    Name: 'awsproton-waf-{{service.name}}'
-    Rules: 
-      - Name: AWS-CRS
-        Priority: 0
-        Statement: 
-          ManagedRuleGroupStatement: 
-            VendorName: AWS
-            Name: AWSManagedRulesCommonRuleSet
-            ExcludedRules: []
-        OverrideAction: 
-          None: {}
-        VisibilityConfig: 
-          SampledRequestsEnabled: false
-          CloudWatchMetricsEnabled: true
-          MetricName: 
-            Fn::Sub: '{{service.name}}-aws-crs-metric'
-      - Name: Bad-Inputs
-        Priority: 1
-        Statement: 
-          ManagedRuleGroupStatement: 
-            VendorName: AWS
-            Name: AWSManagedRulesKnownBadInputsRuleSet
-            ExcludedRules: []
-        OverrideAction: 
-          None: {}
-        VisibilityConfig: 
-          SampledRequestsEnabled: true
-          CloudWatchMetricsEnabled: true
-          MetricName: 
-            Fn::Sub: '{{service.name}}-bad-inputs-metric'
-      - Name: Anonymous-IpList
-        Priority: 2
-        Statement: 
-          ManagedRuleGroupStatement: 
-            VendorName: AWS
-            Name: AWSManagedRulesAnonymousIpList
-            ExcludedRules: []
-        OverrideAction: 
-          None: {}
-    Scope: REGIONAL
+  webAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties: 
+      DefaultAction: 
+        Allow: {}
+      Name: 'awsproton-waf-{{service.name}}'
+      Rules: 
+        - Name: AWS-CRS
+          Priority: 0
+          Statement: 
+            ManagedRuleGroupStatement: 
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+              ExcludedRules: []
+          OverrideAction: 
+            None: {}
+          VisibilityConfig: 
+            SampledRequestsEnabled: false
+            CloudWatchMetricsEnabled: true
+            MetricName: 
+              Fn::Sub: '{{service.name}}-aws-crs-metric'
+        - Name: Bad-Inputs
+          Priority: 1
+          Statement: 
+            ManagedRuleGroupStatement: 
+              VendorName: AWS
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+              ExcludedRules: []
+          OverrideAction: 
+            None: {}
+          VisibilityConfig: 
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: 
+              Fn::Sub: '{{service.name}}-bad-inputs-metric'
+        - Name: Anonymous-IpList
+          Priority: 2
+          Statement: 
+            ManagedRuleGroupStatement: 
+              VendorName: AWS
+              Name: AWSManagedRulesAnonymousIpList
+              ExcludedRules: []
+          OverrideAction: 
+            None: {}
+      Scope: REGIONAL
 
 Outputs:
   ServiceEndpoint:
