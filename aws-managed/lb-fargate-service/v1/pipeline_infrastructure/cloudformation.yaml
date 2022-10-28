@@ -2,9 +2,6 @@ Resources:
   ECRRepo:
     Type: AWS::ECR::Repository
     DeletionPolicy: Retain
-    Properties:
-      ImageScanningConfiguration:
-        ScanOnPush: true
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
