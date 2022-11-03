@@ -12,7 +12,7 @@ Resources:
     # Note that this role has administrator access to your account, so that
     # it can be used to provision any infrastructure in your templates. We
     # recommend you scope down the role permissions to the resources that will be used
-    # in your Proton templates
+    # in your Proton templates file.
     Properties:
       RoleName: ExampleGithubRole
       ManagedPolicyArns: [arn:aws:iam::aws:policy/AdministratorAccess]
