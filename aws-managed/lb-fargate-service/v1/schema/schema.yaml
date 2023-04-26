@@ -33,7 +33,7 @@ schema:
         image:
           type: string
           description: "The name/url of the container image"
-          default: "public.ecr.aws/z9d2n7e1/nginx:1.19.5"          
+          default: "public.ecr.aws/aws-containers/proton-demo-image:2d7f777"          
           minLength: 1
           maxLength: 200
         env_vars:
