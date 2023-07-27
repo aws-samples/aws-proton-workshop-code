@@ -151,17 +151,17 @@ Resources:
       GroupDescription: Access to the public facing load balancer
       VpcId: '{{environment.outputs.VpcId}}'
       SecurityGroupIngress:
-          {% if 'public' == service_instance.inputs.scope %}
-          # Allow access to ALB from anywhere on the internet
-          - CidrIp: 0.0.0.0/0
-            IpProtocol: -1
-          {% else %}
-          # Allow access only from the VPC CIDR
-          - CidrIp: '{{environment.outputs.VpcCIDR}}'
-            IpProtocol: -1
-            FromPort: '{{service_instance.inputs.port}}'
-            ToPort: '{{service_instance.inputs.port}}'
-          {% endif %}
+        {% if 'public' == service_instance.inputs.scope %}
+        # Allow access to ALB from anywhere on the internet
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+        {% else %}
+        # Allow access only from the VPC CIDR
+        - CidrIp: '{{environment.outputs.VpcCIDR}}'
+          IpProtocol: -1
+          FromPort: '{{service_instance.inputs.port}}'
+          ToPort: '{{service_instance.inputs.port}}'
+        {% endif %}
 
   {% if 'public' == service_instance.inputs.scope %}
   {% set scheme = 'internet-facing' %}
@@ -175,8 +175,8 @@ Resources:
     Properties:
       Scheme: '{{scheme}}'
       LoadBalancerAttributes:
-      - Key: idle_timeout.timeout_seconds
-        Value: '30'
+        - Key: idle_timeout.timeout_seconds
+          Value: '30'
       Subnets:
         # The load balancer is placed into the public subnets, so that traffic
         # from the internet can reach the load balancer directly via the internet gateway
