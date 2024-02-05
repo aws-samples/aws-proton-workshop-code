@@ -226,12 +226,6 @@ jobs:
         aws-region: ${{ needs.get-deployment-data.outputs.proton_region }}
         role-to-assume: ${{ needs.get-deployment-data.outputs.role_arn }}
         role-session-name: TF-Github-Actions-Notify-Proton
-      
-    # This is a temporary measure until this feature exits Public Preview
-    - name: Install Proton Model
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: |
-        aws s3 cp s3://aws-proton-preview-public-files/model/proton-2020-07-20.normal.json  .
 
     - name: Notify Proton Success
       id: notify_success
