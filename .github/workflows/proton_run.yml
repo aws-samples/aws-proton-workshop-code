@@ -60,7 +60,7 @@ jobs:
             echo "setting found to true"
             found=true
             echo "setting outputs"
-            echo "::set-output name=deployment-metadata-path::$changed_file"
+            echo "deployment-metadata-path=$changed_file" >> "$GITHUB_OUTPUT"
           fi
         done
         if [[ "$found" == false ]]; then
@@ -72,15 +72,15 @@ jobs:
       id: get-data
       run: |
         modified_resource_arn=$(jq -r '.resourceMetadata.arn' ${{ steps.find-modified.outputs.deployment-metadata-path }})
-        echo "::set-output name=resource_arn::$modified_resource_arn"
+        echo "resource_arn=$modified_resource_arn" >> "$GITHUB_OUTPUT"
         
         IFS=':'
         read -a split_arn <<< "$modified_resource_arn"
         proton_region=${split_arn[3]}
-        echo "::set-output name=proton_region::$proton_region"
+        echo "proton_region=$proton_region" >> "$GITHUB_OUTPUT"
 
         deployment_id=$(jq -r '.deploymentId' ${{ steps.find-modified.outputs.deployment-metadata-path }})
-        echo "::set-output name=deployment_id::$deployment_id"
+        echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
 
         if [[ "$modified_resource_arn" == *":environment/"* ]]; then
           environment_name=${modified_resource_arn##*/}
@@ -114,17 +114,17 @@ jobs:
           exit 1
         fi
 
-        echo "::set-output name=working_directory::$working_directory"
-        echo "::set-output name=environment::$environment_name"
+        echo "working_directory=$working_directory" >> "$GITHUB_OUTPUT"
+        echo "environment=$environment_name" >> "$GITHUB_OUTPUT"
         
         role_arn=$(jq -r --arg env $environment_name '.[$env]["role"]' env_config.json)
-        echo "::set-output name=role_arn::$role_arn"
+        echo "role_arn=$role_arn" >> "$GITHUB_OUTPUT"
 
         target_region=$(jq -r --arg env $environment_name '.[$env]["region"]' env_config.json)
-        echo "::set-output name=target_region::$target_region"
+        echo "target_region=$target_region" >> "$GITHUB_OUTPUT"
 
         state_bucket=$(jq -r --arg env $environment_name '.[$env]["state_bucket"]' env_config.json)
-        echo "::set-output name=state_bucket::$state_bucket"
+        echo "state_bucket=$state_bucket" >> "$GITHUB_OUTPUT"
 
   terraform:
     name: 'Terraform'
@@ -202,7 +202,7 @@ jobs:
         # NOTE: This will probably not play nicely with complex output objects (non primitives)
 
         formatted_outputs=( $(echo $outputs_json | jq -r "to_entries|map(\"key=\(.key),valueString=\(.value.value|tostring)\")|.[]") )
-        echo "::set-output name=tf_outputs::$formatted_outputs"
+        echo "tf_outputs=$formatted_outputs" >> "$GITHUB_OUTPUT"
 
   notify-proton:
     name: 'Notify Proton'
